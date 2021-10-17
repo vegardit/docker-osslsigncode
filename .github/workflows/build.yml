@@ -25,6 +25,10 @@ on:
 env:
   TRIVY_CACHE_DIR: ~/.trivy/cache
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,7 +57,6 @@ jobs:
       run: sudo apt-get install -o Acquire::Retries=3 --no-install-recommends -y dos2unix
 
     - name: Build docker image
-      shell: bash
       env:
         DOCKER_BASE_IMAGE: ${{ matrix.DOCKER_BASE_IMAGE }}
         DOCKER_REGISTRY: docker.io

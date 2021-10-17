@@ -82,7 +82,11 @@ case $base_image_name in
 esac
 
 docker pull $base_image_name
-DOCKER_BUILDKIT=1 docker build "$project_root" \
+
+# https://github.com/docker/buildx/#building-multi-platform-images
+docker run --privileged --rm tonistiigi/binfmt --install all
+docker buildx create --use
+docker buildx build "$project_root" \
    --file "image/$dockerfile" \
    --progress=plain \
    --build-arg INSTALL_SUPPORT_TOOLS=${INSTALL_SUPPORT_TOOLS:-0} \
@@ -96,29 +100,16 @@ DOCKER_BUILDKIT=1 docker build "$project_root" \
    --build-arg GIT_REPO_URL="$(git config --get remote.origin.url)" \
    --build-arg OSSLSIGNCODE_SOURCE_URL="$osslsigncode_source_url" \
    --build-arg OSSLSIGNCODE_VERSION="$app_version" \
+   --platform linux/amd64,linux/arm64 \
    -t $image_name \
+   $(for tag in ${tags[@]}; do echo -n " -t $tag "; done) \
+   $(if [[ "${DOCKER_PUSH:-0}" == "1" ]]; then echo -n "--push"; fi) \
    "$@"
-
-
-#################################################
-# apply tags
-#################################################
-for tag in ${tags[@]}; do
-   docker image tag $image_name $tag
-done
+docker buildx stop
+docker image pull $image_name
 
 
 #################################################
 # perform security audit
 #################################################
 bash "$shared_lib/cmd/audit-image.sh" $image_name
-
-
-#################################################
-# push image with tags to remote docker image registry
-#################################################
-if [[ "${DOCKER_PUSH:-0}" == "1" ]]; then
-   for tag in ${tags[@]}; do
-      docker push $docker_registry/$tag
-   done
-fi
