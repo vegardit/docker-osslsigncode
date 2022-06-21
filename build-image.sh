@@ -85,7 +85,8 @@ docker pull $base_image_name
 
 # https://github.com/docker/buildx/#building-multi-platform-images
 docker run --privileged --rm tonistiigi/binfmt --install all
-docker buildx create --use
+export DOCKER_CLI_EXPERIMENTAL=enabled # prevents "docker: 'buildx' is not a docker command."
+docker buildx create --use # prevents: error: multiple platforms feature is currently not supported for docker driver. Please switch to a different driver (eg. "docker buildx create --use")
 docker buildx build "$project_root" \
    --file "image/$dockerfile" \
    --progress=plain \

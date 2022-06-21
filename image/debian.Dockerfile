@@ -32,22 +32,23 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
   echo "Installing required dev packages ..." && \
   echo "#################################################" && \
   apt-get install --no-install-recommends -y \
-     # required for curl:
+     # required by curl:
      ca-certificates \
      curl \
-     # required for bootstrap:
+     #
+     build-essential \
+     libssl-dev \
+     libcurl4-openssl-dev \
+     # required by osslsigncode < 2.4
      autoconf \
      automake \
      libtool \
      python3-pkgconfig \
-     # required for configure/make:
-     build-essential \
-     libssl-dev \
-     libcurl4-openssl-dev \
-     && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     apt-get install --no-install-recommends -y libgsf-1-dev; \
-  fi
+     # required by osslsigncode >= 2.4
+     cmake \
+     # required by CMakeTest:
+     faketime \
+     python3
 
 RUN \
   set -eu && \
@@ -57,20 +58,30 @@ RUN \
   curl -fsS "$OSSLSIGNCODE_SOURCE_URL" | tar xvz && \
   mv osslsigncode-* osslsigncode && \
   cd osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-    ./autogen.sh; \
+  mkdir build && \
+  if [ -f CMakeLists.txt ]; then \
+    cd build && \
+    cmake -Denable-strict=ON \
+          -Denable-pedantic=ON \
+          .. && \
+    (cmake --build ./ || ( \
+      echo "#################################################" && \
+      echo "CMakeOutput.log" && \
+      echo "#################################################" && \
+      cat /osslsigncode/build/CMakeFiles/CMakeOutput.log && \
+      echo "#################################################" && \
+      echo "BUILD FAILED." && \
+      exit 1 \
+    )); \
   else \
-    ./bootstrap; \
+    ./bootstrap && \
+    ./configure && \
+    make && \
+    mv osslsigncode build && \
+    cd build; \
   fi && \
-  ./configure && \
-  make && \
   strip osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     # https://github.com/mtrojnar/osslsigncode/issues/102
-     (./osslsigncode --version || true); \
-  else \
-     ./osslsigncode --version; \
-  fi
+  ./osslsigncode --version
 
 
 #############################################################
@@ -103,24 +114,16 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
      libcurl4 \
      netbase \
      && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     apt-get install --no-install-recommends -y libgsf-bin; \
-  fi && \
   #
   /mnt/shared/cmd/debian-cleanup.sh
 
-COPY --from=0 /osslsigncode/osslsigncode /usr/local/bin/osslsigncode
+COPY --from=0 /osslsigncode/build/osslsigncode /usr/local/bin/osslsigncode
 
 RUN \
   set -eu && \
   mkdir /work && \
   chmod 555 /usr/local/bin/osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     # https://github.com/mtrojnar/osslsigncode/issues/102
-     (osslsigncode --version || true); \
-  else \
-     osslsigncode --version; \
-  fi
+  osslsigncode --version
 
 ARG BUILD_DATE
 ARG GIT_BRANCH

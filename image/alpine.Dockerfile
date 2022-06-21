@@ -28,20 +28,17 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
   echo "Installing required dev packages ..." && \
   echo "#################################################" && \
   apk add --no-cache \
-     # required for curl:
+     # required by curl:
      ca-certificates \
      curl \
-     # required for bootstrap:
-     autoconf \
-     automake \
-     libtool \
-     # required for configure/make:
+     #
      build-base \
      curl-dev \
-     openssl-dev && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     apk add --no-cache libgsf-dev; \
-  fi
+     openssl-dev \
+     # required by osslsigncode < 2.3
+     autoconf automake libtool \
+     # required by osslsigncode >= 2.4
+     cmake
 
 RUN \
   set -eu && \
@@ -51,22 +48,33 @@ RUN \
   curl -fsS "$OSSLSIGNCODE_SOURCE_URL" | tar xvz && \
   mv osslsigncode-* osslsigncode && \
   cd osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-    ./autogen.sh; \
+  mkdir build && \
+  if [ -f CMakeLists.txt ]; then \
+    # disable CMakeTest which requires faketime command which is not available for alpine
+    sed -i '/include(CMakeTest)/d' CMakeLists.txt && \
+    #
+    cd build && \
+    cmake -Denable-strict=ON \
+          -Denable-pedantic=ON \
+          .. && \
+    (cmake --build ./ || ( \
+      echo "#################################################" && \
+      echo "CMakeOutput.log" && \
+      echo "#################################################" && \
+      cat /osslsigncode/build/CMakeFiles/CMakeOutput.log && \
+      echo "#################################################" && \
+      echo "BUILD FAILED." && \
+      exit 1 \
+    )); \
   else \
-    ./bootstrap; \
+    ./bootstrap && \
+    ./configure && \
+    make && \
+    mv osslsigncode build && \
+    cd build; \
   fi && \
-  ./configure && \
-  make && \
   strip osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     # https://github.com/mtrojnar/osslsigncode/issues/102
-     (./osslsigncode --version || true); \
-  else \
-     ./osslsigncode --version; \
-  fi
-
-
+  ./osslsigncode --version
 
 
 #############################################################
@@ -93,24 +101,16 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
      libssl1.1 \
      libcurl \
      && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     apk add --no-cache libgsf; \
-  fi && \
   #
   /mnt/shared/cmd/alpine-cleanup.sh
 
-COPY --from=0 /osslsigncode/osslsigncode /usr/local/bin/osslsigncode
+COPY --from=0 /osslsigncode/build/osslsigncode /usr/local/bin/osslsigncode
 
 RUN \
   set -eu && \
   mkdir /work && \
   chmod 555 /usr/local/bin/osslsigncode && \
-  if [ "$OSSLSIGNCODE_VERSION" = "2.1" ]; then \
-     # https://github.com/mtrojnar/osslsigncode/issues/102
-     (osslsigncode --version || true); \
-  else \
-     osslsigncode --version; \
-  fi
+  osslsigncode --version
 
 ARG BUILD_DATE
 ARG GIT_BRANCH
