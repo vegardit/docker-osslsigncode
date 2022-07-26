@@ -16,7 +16,7 @@
 
 Docker image for signing Windows binaries with [Microsoft Authenticode](https://docs.microsoft.com/en-us/windows-hardware/drivers/install/authenticode) using [osslsigncode](https://github.com/mtrojnar/osslsigncode).
 
-It is automatically built daily to include the latest OS security fixes.
+It is automatically built **daily** to include the latest OS security fixes.
 
 
 ## <a name="tags"></a>Docker image tagging scheme
