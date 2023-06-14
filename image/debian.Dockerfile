@@ -110,7 +110,7 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
   echo "#################################################" && \
   apt-get install --no-install-recommends -y \
      ca-certificates \
-     libssl1.1 \
+     libssl3 \
      libcurl4 \
      netbase \
      && \
