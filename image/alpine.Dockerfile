@@ -98,7 +98,7 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
   echo "#################################################" && \
   apk add --no-cache \
      ca-certificates \
-     libssl1.1 \
+     libssl3 \
      libcurl \
      && \
   #
