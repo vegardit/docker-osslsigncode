@@ -39,6 +39,7 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared \
      build-essential \
      libssl-dev \
      libcurl4-openssl-dev \
+     zlib1g-dev \
      # required by osslsigncode < 2.4
      autoconf \
      automake \
