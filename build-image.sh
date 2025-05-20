@@ -110,12 +110,12 @@ echo "
 
 docker buildx version # ensures buildx is enabled
 docker buildx create --config /etc/buildkitd.toml --use # prevents: error: multiple platforms feature is currently not supported for docker driver. Please switch to a different driver (eg. "docker buildx create --use")
-# shellcheck disable=SC2154  # base_layer_cache_key is referenced but not assigned.
+# shellcheck disable=SC2154,SC2046  # base_layer_cache_key is referenced but not assigned / Quote this to prevent word splitting
 docker buildx build "$project_root" \
    --file "image/$dockerfile" \
    --progress=plain \
    --pull \
-   --build-arg "INSTALL_SUPPORT_TOOLS=${INSTALL_SUPPORT_TOOLS:-0}" \
+   --build-arg INSTALL_SUPPORT_TOOLS="${INSTALL_SUPPORT_TOOLS:-0}" \
    `# using the current date as value for BASE_LAYER_CACHE_KEY, i.e. the base layer cache (that holds system packages with security updates) will be invalidate once per day` \
    --build-arg BASE_LAYER_CACHE_KEY="$base_layer_cache_key" \
    --build-arg BASE_IMAGE="$base_image_name" \
@@ -126,19 +126,19 @@ docker buildx build "$project_root" \
    --build-arg GIT_REPO_URL="$(git config --get remote.origin.url)" \
    --build-arg OSSLSIGNCODE_SOURCE_URL="$osslsigncode_source_url" \
    --build-arg OSSLSIGNCODE_VERSION="$app_version" \
-   $(if [[ "${ACT:-}" == "true" || "${DOCKER_PUSH:-}" != "true" ]]; then \
+   $(if [[ ${ACT:-} == true || ${DOCKER_PUSH:-} != true ]]; then \
       echo -n "--load --output type=docker"; \
    else \
       echo -n "--platform linux/amd64,linux/arm64,linux/arm/v7"; \
    fi) \
    "${tag_args[@]}" \
-   $(if [[ "${DOCKER_PUSH:-}" == "true" ]]; then echo -n "--push"; fi) \
+   $(if [[ ${DOCKER_PUSH:-} == true ]]; then echo -n "--push"; fi) \
    "$@"
 docker buildx stop
 set +x
 
-if [[ "${DOCKER_PUSH:-}" == "true" ]]; then
-   docker image pull $image_name
+if [[ ${DOCKER_PUSH:-} == true ]]; then
+   docker image pull "$image_name"
 fi
 
 
