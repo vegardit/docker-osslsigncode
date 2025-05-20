@@ -20,7 +20,11 @@ source "$shared_lib/lib/build-image-init.sh"
 #################################################
 image_repo=${DOCKER_IMAGE_REPO:-vegardit/osslsigncode}
 base_image_name=${DOCKER_BASE_IMAGE:-alpine:3}
-base_image_linux_flavor=${base_image_name%%:*}
+case $base_image_name in
+   *alpine*) base_image_linux_flavor=alpine ;;
+   *debian*) base_image_linux_flavor=debian ;;
+   *) echo "ERROR: Unsupported base image $base_image_name"; exit 1 ;;
+esac
 
 app_version=${OSSLSIGNCODE_VERSION:-latest}
 case $app_version in \
@@ -83,8 +87,8 @@ if [[ $OSTYPE == cygwin || $OSTYPE == msys ]]; then
 fi
 
 case $base_image_name in
-   alpine:*) dockerfile="alpine.Dockerfile" ;;
-   debian:*) dockerfile="debian.Dockerfile" ;;
+   *alpine*) dockerfile="alpine.Dockerfile" ;;
+   *debian*) dockerfile="debian.Dockerfile" ;;
    *) echo "ERROR: Unsupported base image $base_image_name"; exit 1 ;;
 esac
 
@@ -96,7 +100,7 @@ export DOCKER_BUILD_KIT=1
 export DOCKER_CLI_EXPERIMENTAL=1 # prevents "docker: 'buildx' is not a docker command."
 
 # Register QEMU emulators for all architectures so Docker can run and build multi-arch images
-docker run --privileged --rm tonistiigi/binfmt --install all
+docker run --privileged --rm ghcr.io/dockerhub-mirror/tonistiigi__binfmt --install all
 
 # https://docs.docker.com/build/buildkit/configure/#resource-limiting
 echo "
@@ -159,13 +163,13 @@ fi
 # push image to ghcr.io
 #################################################
 if [[ ${DOCKER_PUSH_GHCR:-} == true ]]; then
-  for tag in "${tags[@]}"; do
-    set -x
-    docker run --rm \
-      -u "$(id -u):$(id -g)" -e HOME -v "$HOME:$HOME" \
-      -v /etc/docker/certs.d:/etc/docker/certs.d:ro \
-      ghcr.io/regclient/regctl:latest \
-      image copy "$tag" "ghcr.io/$tag"
-    set +x
-  done
+   for tag in "${tags[@]}"; do
+      set -x
+      docker run --rm \
+         -u "$(id -u):$(id -g)" -e HOME -v "$HOME:$HOME" \
+         -v /etc/docker/certs.d:/etc/docker/certs.d:ro \
+         ghcr.io/regclient/regctl:latest \
+         image copy "$tag" "ghcr.io/$tag"
+      set +x
+   done
 fi
