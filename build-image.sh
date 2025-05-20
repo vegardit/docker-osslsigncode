@@ -16,17 +16,6 @@ source "$shared_lib/lib/build-image-init.sh"
 
 
 #################################################
-# check prereqs
-#################################################
-
-if [[ "${DOCKER_PUSH:-}" == "true" ]]; then
-   if ! hash regctl &>/dev/null; then
-      log ERROR "regctl (aka regclient) command line tool is misssing!"
-   fi
-fi
-
-
-#################################################
 # specify target image repo/tag
 #################################################
 image_repo=${DOCKER_IMAGE_REPO:-vegardit/osslsigncode}
@@ -171,6 +160,12 @@ fi
 #################################################
 if [[ ${DOCKER_PUSH_GHCR:-} == true ]]; then
   for tag in "${tags[@]}"; do
-    (set -x; regctl image copy "$tag" "ghcr.io/$tag")
+    set -x
+    docker run --rm \
+      -u "$(id -u):$(id -g)" -e HOME -v "$HOME:$HOME" \
+      -v /etc/docker/certs.d:/etc/docker/certs.d:ro \
+      ghcr.io/regclient/regctl:latest \
+      image copy "$tag" "ghcr.io/$tag"
+    set +x
   done
 fi
