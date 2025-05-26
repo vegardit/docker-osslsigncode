@@ -14,20 +14,20 @@
 
 ## <a name="what-is-it"></a>What is it?
 
-Docker image for signing Windows binaries with [Microsoft Authenticode](https://docs.microsoft.com/en-us/windows-hardware/drivers/install/authenticode) using [osslsigncode](https://github.com/mtrojnar/osslsigncode).
+A multi-arch Docker image for signing Windows binaries with [Microsoft Authenticode](https://docs.microsoft.com/en-us/windows-hardware/drivers/install/authenticode) using [osslsigncode](https://github.com/mtrojnar/osslsigncode).
 
-It is automatically built **weekly** to include the latest OS security fixes.
+Automatically rebuilt **weekly** to include the latest OS security fixes.
 
 
 ## <a name="tags"></a>Docker image tagging scheme
 
 | Tag                            | Description                                                                                | Base Docker Image
 |--------------------------------|--------------------------------------------------------------------------------------------|------------------
-|`:latest`<br>`:latest-alpine`   | build of the latest available [release](https://github.com/mtrojnar/osslsigncode/releases) | alpine:latest
+|`:latest`<br>`:latest-alpine`   | build of the latest available [release](https://github.com/mtrojnar/osslsigncode/releases) | alpine:3
 |`:latest-debian`                | build of the latest available [release](https://github.com/mtrojnar/osslsigncode/releases) | debian:stable-slim
-|`:develop`<br>`:develop-alpine` | build of the development [branch](https://github.com/mtrojnar/osslsigncode)                | alpine:latest
+|`:develop`<br>`:develop-alpine` | build of the development [branch](https://github.com/mtrojnar/osslsigncode)                | alpine:3
 |`:develop-debian`               | build of the development [branch](https://github.com/mtrojnar/osslsigncode)                | debian:stable-slim
-|`:2.x`<br>`:2.x-alpine`         | build of the latest minor version of the respective<br>major release, e.g. `2.x` may contain release `2.9` | alpine:latest
+|`:2.x`<br>`:2.x-alpine`         | build of the latest minor version of the respective<br>major release, e.g. `2.x` may contain release `2.9` | alpine:3
 |`:2.x-debian`                   | build of the latest minor version of the respective<br>major release, e.g. `2.x` may contain release `2.9` | debian:stable-slim
 
 See all tags at https://hub.docker.com/r/vegardit/osslsigncode/tags

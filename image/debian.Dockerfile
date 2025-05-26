@@ -7,25 +7,26 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-ArtifactOfProjectHomePage: https://github.com/vegardit/docker-osslsigncode
 
+# https://hub.docker.com/_/debian/tags?name=stable-slim
+ARG BASE_IMAGE=debian:stable-slim
+
 #############################################################
 # build osslsigncode code signing tool
 #############################################################
-# https://hub.docker.com/_/debian/tags?name=stable-slim
-ARG BASE_IMAGE=debian:stable-slim
 
 # https://github.com/hadolint/hadolint/wiki/DL3006 Always tag the version of an image explicitly
 # hadolint ignore=DL3006
 FROM ${BASE_IMAGE} AS builder
 
-ARG BASE_LAYER_CACHE_KEY
-
-ARG OSSLSIGNCODE_SOURCE_URL
-ARG OSSLSIGNCODE_VERSION
-
 ARG DEBIAN_FRONTEND=noninteractive
 ARG LC_ALL=C
 
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
+
+ARG OSSLSIGNCODE_SOURCE_URL
+ARG OSSLSIGNCODE_VERSION
+
+ARG BASE_LAYER_CACHE_KEY
 
 # https://github.com/hadolint/hadolint/wiki/DL3008 Pin versions
 # hadolint ignore=DL3008
@@ -36,24 +37,24 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared <<EOF
   echo "Installing required dev packages..."
   echo "#################################################"
   apt-get install --no-install-recommends -y \
-     `# required by curl:` \
-     ca-certificates \
-     curl \
-     \
-     build-essential \
-     libssl-dev \
-     libcurl4-openssl-dev \
-     zlib1g-dev \
-     `# required by osslsigncode < 2.4:` \
-     autoconf \
-     automake \
-     libtool \
-     python3-pkgconfig \
-     `# required by osslsigncode >= 2.4:` \
-     cmake \
-     `# required by CMakeTest:` \
-     faketime \
-     python3
+    `# required by curl:` \
+    ca-certificates \
+    curl \
+    \
+    build-essential \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
+    `# required by osslsigncode < 2.4:` \
+    autoconf \
+    automake \
+    libtool \
+    python3-pkgconfig \
+    `# required by osslsigncode >= 2.4:` \
+    cmake \
+    `# required by CMakeTest:` \
+    faketime \
+    python3
 
 EOF
 
@@ -72,9 +73,7 @@ RUN <<EOF
     sed -i '/include(CMakeTest)/d' CMakeLists.txt
 
     cd build || exit 1
-    cmake -Denable-strict=ON \
-          -Denable-pedantic=ON \
-          ..
+    cmake -Denable-strict=ON -Denable-pedantic=ON ..
     (cmake --build ./ || (
       echo "#################################################"
       echo "CMakeOutput.log:"
@@ -96,28 +95,22 @@ RUN <<EOF
 
 EOF
 
+
 #############################################################
 # build final image
 #############################################################
 
 # https://github.com/hadolint/hadolint/wiki/DL3006 Always tag the version of an image explicitly
 # hadolint ignore=DL3006
-FROM ${BASE_IMAGE}
-
-LABEL maintainer="Vegard IT GmbH (vegardit.com)"
-
-# https://github.com/hadolint/hadolint/wiki/DL3002 Last USER should not be root
-# hadolint ignore=DL3002
-USER root
-
-ARG BASE_LAYER_CACHE_KEY
-ARG INSTALL_SUPPORT_TOOLS=0
-ARG OSSLSIGNCODE_VERSION
+FROM ${BASE_IMAGE} as final
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG LC_ALL=C
 
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
+
+ARG INSTALL_SUPPORT_TOOLS=0
+ARG BASE_LAYER_CACHE_KEY
 
 # https://github.com/hadolint/hadolint/wiki/DL3008 Pin versions
 # hadolint ignore=DL3008
@@ -129,10 +122,10 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared <<EOF
   echo "Installing required packages..."
   echo "#################################################"
   apt-get install --no-install-recommends -y \
-     ca-certificates \
-     libssl3 \
-     libcurl4 \
-     netbase
+    ca-certificates \
+    libssl3 \
+    libcurl4 \
+    netbase
 
   /mnt/shared/cmd/debian-cleanup.sh
 
@@ -141,24 +134,30 @@ EOF
 COPY --from=builder /osslsigncode/build/osslsigncode /usr/local/bin/osslsigncode
 
 RUN <<EOF
-  set -eu
   mkdir /work
   chmod 555 /usr/local/bin/osslsigncode
   osslsigncode --version
 
 EOF
 
-ARG BUILD_DATE
-ARG GIT_BRANCH
-ARG GIT_COMMIT_HASH
-ARG GIT_COMMIT_DATE
-ARG GIT_REPO_URL
+ARG OCI_authors
+ARG OCI_title
+ARG OCI_description
+ARG OCI_source
+ARG OCI_revision
+ARG OCI_version
+ARG OCI_created
 
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
 LABEL \
-  org.label-schema.schema-version="1.0" \
-  org.label-schema.build-date=$BUILD_DATE \
-  org.label-schema.vcs-ref=$GIT_COMMIT_HASH \
-  org.label-schema.vcs-url=$GIT_REPO_URL
+  org.opencontainers.image.title="$OCI_title" \
+  org.opencontainers.image.description="$OCI_description" \
+  org.opencontainers.image.source="$OCI_source" \
+  org.opencontainers.image.revision="$OCI_revision" \
+  org.opencontainers.image.version="$OCI_version" \
+  org.opencontainers.image.created="$OCI_created"
+
+LABEL maintainer="$OCI_authors"
 
 WORKDIR /work
 

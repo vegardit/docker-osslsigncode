@@ -7,45 +7,45 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-ArtifactOfProjectHomePage: https://github.com/vegardit/docker-osslsigncode
 
+# https://hub.docker.com/_/alpine/tags?name=3
+# https://github.com/alpinelinux/docker-alpine/blob/master/Dockerfile
+ARG BASE_IMAGE=alpine:3
+
 #############################################################
 # build osslsigncode code signing tool
 #############################################################
-# https://hub.docker.com/_/alpine/tags?name=latest
-# https://github.com/alpinelinux/docker-alpine/blob/master/Dockerfile
-ARG BASE_IMAGE=alpine:latest
 
 # https://github.com/hadolint/hadolint/wiki/DL3006 Always tag the version of an image explicitly
 # hadolint ignore=DL3006
 FROM ${BASE_IMAGE} AS builder
 
-ARG BASE_LAYER_CACHE_KEY
+SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
 
 ARG OSSLSIGNCODE_SOURCE_URL
 ARG OSSLSIGNCODE_VERSION
 
-SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
+ARG BASE_LAYER_CACHE_KEY
 
 # https://github.com/hadolint/hadolint/wiki/DL3018 Pin versions
 # hadolint ignore=DL3018
 RUN --mount=type=bind,source=.shared,target=/mnt/shared <<EOF
-  #!/bin/ash
   /mnt/shared/cmd/alpine-install-os-updates.sh
 
   echo "#################################################"
   echo "Installing required dev packages..."
   echo "#################################################"
   apk add --no-cache \
-     `# required by curl:` \
-     ca-certificates \
-     curl \
-     \
-     build-base \
-     curl-dev \
-     openssl-dev \
-     `# required by osslsigncode < 2.4:` \
-     autoconf automake libtool \
-     `# required by osslsigncode >= 2.4:` \
-     cmake
+    `# required by curl:` \
+    ca-certificates \
+    curl \
+    \
+    build-base \
+    curl-dev \
+    openssl-dev \
+    `# required by osslsigncode < 2.4:` \
+    autoconf automake libtool \
+    `# required by osslsigncode >= 2.4:` \
+    cmake
 
 EOF
 
@@ -64,9 +64,7 @@ RUN <<EOF
     sed -i '/include(CMakeTest)/d' CMakeLists.txt
 
     cd build || exit 1
-    cmake -Denable-strict=ON \
-          -Denable-pedantic=ON \
-          ..
+    cmake -Denable-strict=ON -Denable-pedantic=ON ..
     (cmake --build ./ || (
       echo "#################################################"
       echo "CMakeOutput.log:"
@@ -95,18 +93,11 @@ EOF
 
 # https://github.com/hadolint/hadolint/wiki/DL3006 Always tag the version of an image explicitly
 # hadolint ignore=DL3006
-FROM ${BASE_IMAGE}
-
-LABEL maintainer="Vegard IT GmbH (vegardit.com)"
-
-# https://github.com/hadolint/hadolint/wiki/DL3002 Last USER should not be root
-# hadolint ignore=DL3002
-USER root
-
-ARG BASE_LAYER_CACHE_KEY
-ARG OSSLSIGNCODE_VERSION
+FROM ${BASE_IMAGE} as final
 
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
+
+ARG BASE_LAYER_CACHE_KEY
 
 # https://github.com/hadolint/hadolint/wiki/DL3018 Pin versions
 # hadolint ignore=DL3018
@@ -128,24 +119,30 @@ EOF
 COPY --from=builder /osslsigncode/build/osslsigncode /usr/local/bin/osslsigncode
 
 RUN <<EOF
-  set -eu
   mkdir /work
   chmod 555 /usr/local/bin/osslsigncode
   osslsigncode --version
 
 EOF
 
-ARG BUILD_DATE
-ARG GIT_BRANCH
-ARG GIT_COMMIT_HASH
-ARG GIT_COMMIT_DATE
-ARG GIT_REPO_URL
+ARG OCI_authors
+ARG OCI_title
+ARG OCI_description
+ARG OCI_source
+ARG OCI_revision
+ARG OCI_version
+ARG OCI_created
 
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
 LABEL \
-  org.label-schema.schema-version="1.0" \
-  org.label-schema.build-date=$BUILD_DATE \
-  org.label-schema.vcs-ref=$GIT_COMMIT_HASH \
-  org.label-schema.vcs-url=$GIT_REPO_URL
+  org.opencontainers.image.title="$OCI_title" \
+  org.opencontainers.image.description="$OCI_description" \
+  org.opencontainers.image.source="$OCI_source" \
+  org.opencontainers.image.revision="$OCI_revision" \
+  org.opencontainers.image.version="$OCI_version" \
+  org.opencontainers.image.created="$OCI_created"
+
+LABEL maintainer="$OCI_authors"
 
 WORKDIR /work
 
