@@ -123,8 +123,8 @@ RUN --mount=type=bind,source=.shared,target=/mnt/shared <<EOF
   echo "#################################################"
   apt-get install --no-install-recommends -y \
     ca-certificates \
-    libssl3 \
-    libcurl4 \
+    libssl3t64 \
+    libcurl4t64 \
     netbase
 
   /mnt/shared/cmd/debian-cleanup.sh
